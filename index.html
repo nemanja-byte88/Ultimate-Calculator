@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f11">
+<title>Calculator v3.0</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0f0f11; --bg2: #1c1c1e; --bg3: #2c2c2e;
+    --display: #1a1a1e; --accent: #ff9f0a; --hover: #ffb340;
+    --fg: #ffffff; --dim: #888888;
+    --btn-num: #333335; --btn-op: #ff9f0a; --btn-fn: #636366;
+    --green: #30d158; --blue: #5ac8fa; --purple: #bf5af2; --red: #ff453a;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* ── APP SHELL ── */
+  .app { display: flex; flex-direction: column; height: 100vh; max-width: 520px; margin: 0 auto; }
+
+  /* ── TAB BAR ── */
+  .tab-bar { display: flex; background: #111113; border-bottom: 1px solid #222; flex-shrink: 0; }
+  .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 2px 0; background: transparent; border: none; color: var(--dim); cursor: pointer; font-size: 9px; font-family: inherit; gap: 2px; position: relative; transition: color 0.2s; }
+  .tab-btn .icon { font-size: 18px; line-height: 1; }
+  .tab-btn .label { font-size: 9px; padding-bottom: 6px; }
+  .tab-btn .indicator { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: transparent; transition: background 0.2s; }
+  .tab-btn.active { font-weight: 600; }
+
+  /* ── CONTENT ── */
+  .content { flex: 1; overflow-y: auto; background: var(--bg2); }
+  .tab-content { display: none; padding: 16px; }
+  .tab-content.active { display: block; }
+
+  /* ── DISPLAY ── */
+  .display-box { background: var(--display); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; }
+  .display-label { color: var(--dim); font-size: 10px; text-align: right; margin-bottom: 4px; }
+  .display-input { width: 100%; background: transparent; border: none; outline: none; color: var(--fg); font-size: clamp(24px, 8vw, 36px); text-align: right; font-family: inherit; font-weight: 200; caret-color: var(--accent); }
+
+  /* ── BUTTONS ── */
+  .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+  .btn { border: none; border-radius: 50%; aspect-ratio: 1; font-size: clamp(16px, 5vw, 22px); font-family: inherit; cursor: pointer; transition: filter 0.1s, transform 0.1s; display: flex; align-items: center; justify-content: center; }
+  .btn:active { transform: scale(0.92); filter: brightness(1.3); }
+  .btn-num { background: var(--btn-num); color: var(--fg); }
+  .btn-op  { background: var(--btn-op);  color: #000; }
+  .btn-fn  { background: var(--btn-fn);  color: var(--fg); }
+  .btn-num:hover { background: #444446; }
+  .btn-op:hover  { background: var(--hover); }
+  .btn-fn:hover  { background: #7a7a7e; }
+
+  /* ── SCIENTIFIC ── */
+  .sci-toggle { width: 100%; background: var(--bg3); color: var(--accent); border: none; border-radius: 8px; padding: 8px 12px; text-align: left; font-size: 13px; font-family: inherit; cursor: pointer; margin-bottom: 6px; transition: background 0.15s; }
+  .sci-toggle:hover { background: #3a3a3c; }
+  .sci-grid { display: none; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+  .sci-grid.open { display: grid; }
+  .btn-sci { background: var(--bg3); color: var(--accent); border: none; border-radius: 8px; padding: 8px 4px; font-size: 12px; font-family: inherit; cursor: pointer; transition: background 0.15s; }
+  .btn-sci:hover { background: #3a3a3c; }
+  .btn-sci:active { transform: scale(0.95); }
+
+  /* ── HISTORY ── */
+  .history-box { background: var(--bg3); border-radius: 8px; padding: 10px 12px; }
+  .history-label { color: var(--dim); font-size: 10px; margin-bottom: 6px; }
+  .history-item { color: var(--dim); font-size: 12px; padding: 2px 0; text-align: right; }
+
+  /* ── SECTION TITLE ── */
+  .section-title { font-size: clamp(15px, 4vw, 18px); font-weight: 700; margin-bottom: 14px; }
+
+  /* ── UNIT TOGGLE ── */
+  .unit-toggle { display: flex; background: var(--bg3); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+  .unit-btn { flex: 1; padding: 8px; border: none; background: transparent; color: var(--dim); font-family: inherit; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .unit-btn.active { background: var(--accent); color: #000; font-weight: 600; }
+
+  /* ── GENDER / GOAL TOGGLE ── */
+  .toggle-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .toggle-btn { flex: 1; min-width: 60px; padding: 8px 6px; border: none; border-radius: 8px; background: var(--bg3); color: var(--fg); font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .toggle-btn.active { background: var(--accent); color: #000; font-weight: 600; }
+  .toggle-btn:active { transform: scale(0.96); }
+
+  /* ── FORM FIELDS ── */
+  .field-label { color: var(--dim); font-size: 12px; margin-bottom: 4px; }
+  .field-input { width: 100%; background: var(--bg3); color: var(--fg); border: none; border-radius: 8px; padding: 10px 14px; font-size: 16px; font-family: inherit; outline: none; margin-bottom: 12px; caret-color: var(--accent); }
+  .field-input:focus { box-shadow: 0 0 0 2px var(--accent); }
+
+  /* ── ACCENT BUTTON ── */
+  .accent-btn { width: 100%; padding: 14px; background: var(--accent); color: #000; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; margin-bottom: 14px; transition: background 0.15s, transform 0.1s; }
+  .accent-btn:hover { background: var(--hover); }
+  .accent-btn:active { transform: scale(0.98); }
+
+  /* ── RESULT BOX ── */
+  .result-big { font-size: clamp(22px, 7vw, 32px); font-weight: 700; color: var(--accent); text-align: center; padding: 10px 0; }
+  .result-sub { font-size: 14px; color: var(--dim); text-align: center; padding-bottom: 8px; }
+
+  /* ── RESULTS LIST ── */
+  .results-box { background: var(--bg3); border-radius: 12px; overflow: hidden; }
+  .result-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #333; }
+  .result-row:last-child { border-bottom: none; }
+  .result-row-label { color: var(--dim); font-size: 13px; }
+  .result-row-val { font-size: 16px; font-weight: 700; }
+
+  /* ── CONVERTER ── */
+  .converter-layout { display: flex; gap: 12px; }
+  .cat-list { width: 140px; flex-shrink: 0; }
+  .conv-right { flex: 1; min-width: 0; }
+  .cat-btn { display: block; width: 100%; text-align: left; padding: 8px 10px; border: none; border-radius: 8px; background: var(--bg3); color: var(--fg); font-family: inherit; font-size: 12px; cursor: pointer; margin-bottom: 4px; transition: all 0.15s; }
+  .cat-btn.active { background: var(--accent); color: #000; font-weight: 600; }
+  .cat-btn:hover:not(.active) { background: #3a3a3c; }
+  .conv-btn { display: block; width: 100%; text-align: left; padding: 7px 10px; border: none; border-radius: 6px; background: var(--bg3); color: var(--fg); font-family: inherit; font-size: 12px; cursor: pointer; margin-bottom: 3px; transition: all 0.15s; }
+  .conv-btn.active { background: var(--accent); color: #000; font-weight: 600; }
+  .conv-btn:hover:not(.active) { background: #3a3a3c; }
+  .conv-input-box { background: var(--bg3); border-radius: 12px; padding: 12px; margin-top: 10px; }
+
+  /* ── PERCENTAGE ── */
+  .pct-section { background: var(--bg3); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .pct-title { color: var(--accent); font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+  .pct-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .pct-input { flex: 1; background: var(--display); color: var(--fg); border: none; border-radius: 8px; padding: 8px 10px; font-size: 15px; font-family: inherit; outline: none; caret-color: var(--accent); }
+  .pct-eq { background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 8px 14px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+  .pct-eq:hover { background: var(--hover); }
+  .pct-result { font-size: 20px; font-weight: 700; color: var(--accent); text-align: right; margin-top: 6px; }
+
+  /* ── FITNESS SUB-TABS ── */
+  .sub-bar { display: flex; background: #111113; overflow-x: auto; border-bottom: 1px solid #222; margin: -16px -16px 16px; scrollbar-width: none; }
+  .sub-bar::-webkit-scrollbar { display: none; }
+  .sub-btn { flex-shrink: 0; padding: 10px 12px 8px; background: transparent; border: none; color: var(--dim); font-family: inherit; font-size: 11px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+  .sub-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .sub-content { display: none; }
+  .sub-content.active { display: block; }
+
+  /* ── BMI BAR ── */
+  .bmi-bar-bg { background: var(--bg3); border-radius: 6px; height: 10px; overflow: hidden; margin: 8px 0; }
+  .bmi-bar-fill { height: 100%; border-radius: 6px; width: 0; transition: width 0.4s ease; }
+
+  /* ── 1RM TABLE ── */
+  .rm-row { display: flex; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid #333; }
+  .rm-row:last-child { border-bottom: none; }
+  .rm-pct { color: var(--dim); font-size: 13px; }
+  .rm-val { font-size: 14px; font-weight: 700; color: var(--fg); }
+  .rm-val.main { color: var(--accent); font-size: 16px; }
+
+  /* ── HR ZONES ── */
+  .zone-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #333; }
+  .zone-row:last-child { border-bottom: none; }
+  .zone-name { font-size: 12px; font-weight: 700; }
+  .zone-val { font-size: 13px; color: var(--fg); }
+
+  /* ── HINT TEXT ── */
+  .hint { color: var(--dim); font-size: 11px; text-align: center; margin-top: 8px; line-height: 1.6; }
+
+  /* ── SCROLLABLE CONTENT ── */
+  .scroll-y { overflow-y: auto; }
+
+  @media (max-width: 380px) {
+    .btn { font-size: 14px; }
+    .cat-list { width: 110px; }
+    .tab-btn .icon { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TAB BAR -->
+  <div class="tab-bar" id="tabBar"></div>
+
+  <!-- CONTENT -->
+  <div class="content" id="mainContent"></div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+const TABS = [
+  { icon: '🧮', label: 'Basic',      color: '#ff9f0a', id: 'basic' },
+  { icon: '📐', label: 'Converter',  color: '#30d158', id: 'converter' },
+  { icon: '📊', label: 'Percentage', color: '#5ac8fa', id: 'percentage' },
+  { icon: '💪', label: 'Fitness',    color: '#bf5af2', id: 'fitness' },
+  { icon: '🏦', label: 'Loan',       color: '#ff453a', id: 'loan' },
+];
+
+const CATEGORIES = {
+  '📏 Length': {
+    'km → miles': x => x * 0.621371, 'miles → km': x => x * 1.60934,
+    'm → feet': x => x * 3.28084, 'feet → m': x => x * 0.3048,
+    'cm → inches': x => x * 0.393701, 'inches → cm': x => x * 2.54,
+  },
+  '⚖️ Weight': {
+    'kg → lbs': x => x * 2.20462, 'lbs → kg': x => x / 2.20462,
+    'kg → st': x => x * 0.157473, 'st → kg': x => x / 0.157473,
+    'lbs → st': x => x * 0.0714286, 'st → lbs': x => x / 0.0714286,
+    'g → oz': x => x * 0.035274, 'oz → g': x => x / 0.035274,
+  },
+  '🌡️ Temp': {
+    '°C → °F': x => x * 9/5 + 32, '°F → °C': x => (x-32)*5/9,
+    '°C → K': x => x + 273.15, 'K → °C': x => x - 273.15,
+  },
+  '📐 Area': {
+    'm² → ft²': x => x * 10.7639, 'ft² → m²': x => x / 10.7639,
+    'ha → acres': x => x * 2.47105, 'acres → ha': x => x / 2.47105,
+  },
+  '⚡ Speed': {
+    'km/h → mph': x => x * 0.621371, 'mph → km/h': x => x / 0.621371,
+    'm/s → km/h': x => x * 3.6, 'km/h → m/s': x => x / 3.6,
+    'km/h → kn': x => x * 0.539957, 'kn → km/h': x => x / 0.539957,
+    'mph → kn': x => x * 0.868976, 'kn → mph': x => x / 0.868976,
+  },
+  '💾 Data': {
+    'MB → GB': x => x / 1024, 'GB → MB': x => x * 1024,
+    'GB → TB': x => x / 1024, 'TB → GB': x => x * 1024,
+  },
+};
+
+// ── UTILS ─────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const mk = (tag, cls, html='') => {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (html) el.innerHTML = html;
+  return el;
+};
+
+function unitToggle(options, onChange) {
+  let cur = options[0];
+  const wrap = mk('div','unit-toggle');
+  options.forEach(opt => {
+    const b = mk('button','unit-btn' + (opt===cur?' active':''), opt);
+    b.onclick = () => {
+      cur = opt; onChange(opt);
+      wrap.querySelectorAll('.unit-btn').forEach(x => x.classList.toggle('active', x.textContent===opt));
+    };
+    wrap.appendChild(b);
+  });
+  return { el: wrap, get: () => cur };
+}
+
+function toggleRow(options, onChange, def) {
+  let cur = def || options[0];
+  const wrap = mk('div','toggle-row');
+  options.forEach(opt => {
+    const b = mk('button','toggle-btn' + (opt===cur?' active':''), opt);
+    b.onclick = () => {
+      cur = opt; onChange(opt);
+      wrap.querySelectorAll('.toggle-btn').forEach(x => x.classList.toggle('active', x.textContent===opt));
+    };
+    wrap.appendChild(b);
+  });
+  return { el: wrap, get: () => cur };
+}
+
+function field(labelText, placeholder='') {
+  const wrap = mk('div');
+  const lbl = mk('div','field-label', labelText);
+  const inp = mk('input','field-input');
+  inp.type = 'number'; inp.placeholder = placeholder || '0';
+  inp.inputMode = 'decimal';
+  wrap.appendChild(lbl); wrap.appendChild(inp);
+  return { el: wrap, inp };
+}
+
+function accentBtn(text, onClick) {
+  const b = mk('button','accent-btn', text);
+  b.onclick = onClick;
+  return b;
+}
+
+function resultBig(val='—', sub='') {
+  const wrap = mk('div');
+  const r = mk('div','result-big', val);
+  wrap.appendChild(r);
+  if (sub) wrap.appendChild(mk('div','result-sub', sub));
+  return { el: wrap, set: (v, s='') => { r.textContent = v; } };
+}
+
+// ── BUILD TABS ─────────────────────────────────────────
+function buildBasic() {
+  const div = mk('div','tab-content', '');
+  let expr = ''; let history = [];
+
+  const dispBox = mk('div','display-box');
+  dispBox.innerHTML = '<div class="display-label">Basic Calculator</div>';
+  const inp = mk('input','display-input');
+  inp.readOnly = true; inp.value = '0';
+  dispBox.appendChild(inp); div.appendChild(dispBox);
+
+  // Scientific
+  const sciToggle = mk('button','sci-toggle', '  Scientific  ▼');
+  div.appendChild(sciToggle);
+  const sciGrid = mk('div','sci-grid');
+  const sciBtns = [
+    ['sin(','cos(','tan(','log(','ln('],
+    ['Math.sqrt(','π','e','^','Math.abs('],
+    ['(',')', 'factorial(','1/(',''],
+  ];
+  sciBtns.flat().forEach(s => {
+    if (!s) return;
+    const b = mk('button','btn-sci', s==='π'?'π':s==='e'?'e':s);
+    b.onclick = () => {
+      const val = s==='π'?'Math.PI':s==='e'?'Math.E':s;
+      expr += val; inp.value = expr || '0';
+    };
+    sciGrid.appendChild(b);
+  });
+  div.appendChild(sciGrid);
+  sciToggle.onclick = () => {
+    sciGrid.classList.toggle('open');
+    sciToggle.textContent = sciGrid.classList.contains('open') ? '  Scientific  ▲' : '  Scientific  ▼';
+  };
+
+  // Buttons
+  const grid = mk('div','btn-grid');
+  const btns = [
+    ['C','fn'],['⌫','fn'],['%','fn'],['÷','op'],
+    ['7','num'],['8','num'],['9','num'],['×','op'],
+    ['4','num'],['5','num'],['6','num'],['−','op'],
+    ['1','num'],['2','num'],['3','num'],['+','op'],
+    ['00','num'],['0','num'],['.','num'],['=','op'],
+  ];
+  btns.forEach(([label, kind]) => {
+    const b = mk('button',`btn btn-${kind}`, label);
+    b.onclick = () => {
+      if (label==='C') { expr=''; inp.value='0'; }
+      else if (label==='⌫') { expr=expr.slice(0,-1); inp.value=expr||'0'; }
+      else if (label==='=') {
+        try {
+          let e = expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/\^/g,'**');
+          // support factorial
+          e = e.replace(/factorial\((\d+)\)/g, (_,n) => {
+            let r=1; for(let i=2;i<=+n;i++) r*=i; return r;
+          });
+          const r = Function('"use strict"; return ('+e+')')();
+          const res = parseFloat(r.toFixed(10)).toString();
+          history.unshift(`${expr} = ${res}`);
+          if (history.length>5) history.pop();
+          histBox.innerHTML = history.map(h=>`<div class="history-item">${h}</div>`).join('');
+          expr = res; inp.value = res;
+        } catch { inp.value='Error'; expr=''; }
+      } else {
+        const map = {'÷':'/','×':'*','−':'-'};
+        expr += map[label]||label;
+        inp.value = expr;
+      }
+    };
+    grid.appendChild(b);
+  });
+  div.appendChild(grid);
+
+  // History
+  const hWrap = mk('div','history-box');
+  hWrap.appendChild(mk('div','history-label','History'));
+  const histBox = mk('div');
+  hWrap.appendChild(histBox);
+  div.appendChild(hWrap);
+  return div;
+}
+
+function buildConverter() {
+  const div = mk('div','tab-content');
+  const layout = mk('div','converter-layout');
+
+  const catList = mk('div','cat-list');
+  const convRight = mk('div','conv-right');
+  const convList = mk('div');
+  const convInputBox = mk('div','conv-input-box');
+
+  let selectedCat = Object.keys(CATEGORIES)[0];
+  let selectedConv = Object.keys(CATEGORIES[selectedCat])[0];
+
+  const lbl = mk('div','field-label','Category'); catList.appendChild(lbl);
+
+  function renderCats() {
+    catList.querySelectorAll('.cat-btn').forEach(b=>b.remove());
+    Object.keys(CATEGORIES).forEach(cat => {
+      const b = mk('button','cat-btn'+(cat===selectedCat?' active':''), cat);
+      b.onclick = () => {
+        selectedCat = cat;
+        selectedConv = Object.keys(CATEGORIES[cat])[0];
+        renderCats(); renderConvs();
+      };
+      catList.appendChild(b);
+    });
+  }
+
+  function renderConvs() {
+    convList.innerHTML = '';
+    Object.keys(CATEGORIES[selectedCat]).forEach(conv => {
+      const b = mk('button','conv-btn'+(conv===selectedConv?' active':''), conv);
+      b.onclick = () => { selectedConv=conv; renderConvs(); };
+      convList.appendChild(b);
+    });
+  }
+
+  const convLbl = mk('div','field-label','Conversion'); convRight.appendChild(convLbl);
+  convRight.appendChild(convList);
+
+  // Input
+  convInputBox.innerHTML = '<div class="field-label">Value</div>';
+  const valInp = mk('input','field-input'); valInp.type='number'; valInp.placeholder='0'; valInp.inputMode='decimal';
+  convInputBox.appendChild(valInp);
+  const cvtBtn = accentBtn('Convert →', () => {
+    try {
+      const v = parseFloat(valInp.value);
+      const r = CATEGORIES[selectedCat][selectedConv](v);
+      resLbl.textContent = parseFloat(r.toFixed(6)).toLocaleString();
+    } catch { resLbl.textContent = 'Error'; }
+  });
+  convInputBox.appendChild(cvtBtn);
+  convInputBox.appendChild(mk('div','field-label','Result'));
+  const resLbl = mk('div','result-big','—'); convInputBox.appendChild(resLbl);
+  convRight.appendChild(convInputBox);
+
+  layout.appendChild(catList); layout.appendChild(convRight);
+  div.appendChild(layout);
+  renderCats(); renderConvs();
+  return div;
+}
+
+function buildPercentage() {
+  const div = mk('div','tab-content');
+
+  function section(title, labels, calcFn) {
+    const box = mk('div','pct-section');
+    box.appendChild(mk('div','pct-title', title));
+    const row = mk('div','pct-row');
+    const inputs = labels.map((lbl,i) => {
+      if (i>0) row.appendChild(mk('span','hint',' → '));
+      const inp = mk('input','pct-input'); inp.placeholder=lbl; inp.type='number'; inp.inputMode='decimal';
+      row.appendChild(inp); return inp;
+    });
+    const eq = mk('button','pct-eq','=');
+    const res = mk('div','pct-result','—');
+    eq.onclick = () => {
+      try {
+        const vals = inputs.map(i=>parseFloat(i.value));
+        res.textContent = parseFloat(calcFn(...vals).toFixed(4)) + (title.includes('%')||title.includes('Change')?'%':'');
+        res.style.color = 'var(--accent)';
+      } catch { res.textContent='Error'; res.style.color='var(--red)'; }
+    };
+    row.appendChild(eq); box.appendChild(row); box.appendChild(res);
+    div.appendChild(box);
+  }
+
+  section('X% of Y = ?', ['X (%)', 'Y'], (a,b) => a*b/100);
+  section('X is what % of Y?', ['X', 'Y'], (a,b) => a/b*100);
+  section('Change from X → Y (%)', ['From X', 'To Y'], (a,b) => (b-a)/a*100);
+  return div;
+}
+
+function buildFitness() {
+  const div = mk('div','tab-content');
+  const subBar = mk('div','sub-bar');
+  div.appendChild(subBar);
+
+  const subs = ['BMI','Calories','Protein','Macros','Water','Body Fat','Ideal Wt','1RM','HR Zones'];
+  const subContents = [];
+
+  subs.forEach((name, i) => {
+    const btn = mk('button','sub-btn'+(i===0?' active':''), name);
+    btn.onclick = () => {
+      subBar.querySelectorAll('.sub-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      subContents.forEach(c=>c.classList.remove('active'));
+      subContents[i].classList.add('active');
+    };
+    subBar.appendChild(btn);
+    const c = mk('div','sub-content'+(i===0?' active':''));
+    subContents.push(c); div.appendChild(c);
+  });
+
+  // ── BMI ──
+  const bmiDiv = subContents[0];
+  bmiDiv.appendChild(mk('div','section-title','BMI Calculator'));
+  const bmiUnit = unitToggle(['kg/cm','lbs/in'], ()=>{});
+  bmiDiv.appendChild(bmiUnit.el);
+  const bmiH = field('Height'); bmiDiv.appendChild(bmiH.el);
+  const bmiW = field('Weight'); bmiDiv.appendChild(bmiW.el);
+  const bmiRes = mk('div','result-big','—'); bmiDiv.appendChild(bmiRes);
+  const bmiCat = mk('div','result-sub',''); bmiDiv.appendChild(bmiCat);
+  const bmiBarBg = mk('div','bmi-bar-bg'); const bmiBarFill = mk('div','bmi-bar-fill'); bmiBarBg.appendChild(bmiBarFill); bmiDiv.appendChild(bmiBarBg);
+  bmiDiv.appendChild(accentBtn('Calculate BMI', () => {
+    try {
+      let h = parseFloat(bmiH.inp.value), w = parseFloat(bmiW.inp.value);
+      if (bmiUnit.get()==='lbs/in') { h*=2.54; w*=0.453592; } else { h/=100; }
+      const bmi = w/(h*h);
+      bmiRes.textContent = 'BMI: ' + bmi.toFixed(1);
+      const cats = [[18.5,'⚠️ Underweight','#5ac8fa',25],[25,'✅ Normal','#30d158',50],[30,'⚠️ Overweight','var(--accent)',75],[999,'🔴 Obese','#ff453a',95]];
+      const [,cat,col,bv] = cats.find(([t])=>bmi<t);
+      bmiCat.textContent=cat; bmiBarFill.style.background=col; bmiBarFill.style.width=bv+'%';
+    } catch { bmiRes.textContent='Error'; }
+  }));
+  bmiDiv.appendChild(mk('div','hint','<18.5 Under | 18.5-24.9 Normal | 25-29.9 Over | ≥30 Obese'));
+
+  // ── CALORIES ──
+  const calDiv = subContents[1];
+  calDiv.appendChild(mk('div','section-title','Daily Calories (TDEE)'));
+  const calUnit = unitToggle(['kg/cm','lbs/in'], ()=>{});
+  calDiv.appendChild(calUnit.el);
+  const calGender = toggleRow(['Male','Female'], ()=>{});
+  calDiv.appendChild(calGender.el);
+  const calAge = field('Age'); calDiv.appendChild(calAge.el);
+  const calH = field('Height'); calDiv.appendChild(calH.el);
+  const calW = field('Weight'); calDiv.appendChild(calW.el);
+  calDiv.appendChild(mk('div','field-label','Activity Level'));
+  const calAct = toggleRow(['Sedentary','Light','Moderate','Active','Very Active'], ()=>{}, 'Moderate');
+  calDiv.appendChild(calAct.el);
+  calDiv.appendChild(mk('div','field-label','Goal'));
+  const calGoal = toggleRow(['Lose Weight','Maintain','Gain Muscle'], ()=>{}, 'Maintain');
+  calDiv.appendChild(calGoal.el);
+  const calRes = mk('div','result-big','—'); calDiv.appendChild(calRes);
+  calDiv.appendChild(accentBtn('Calculate', () => {
+    try {
+      let h=parseFloat(calH.inp.value), w=parseFloat(calW.inp.value), age=parseFloat(calAge.inp.value);
+      if (calUnit.get()==='lbs/in') { h*=2.54; w*=0.453592; }
+      const bmr = calGender.get()==='Male' ? 10*w+6.25*h-5*age+5 : 10*w+6.25*h-5*age-161;
+      const mults = {Sedentary:1.2,Light:1.375,Moderate:1.55,Active:1.725,'Very Active':1.9};
+      const adjs = {'Lose Weight':-500,Maintain:0,'Gain Muscle':300};
+      calRes.textContent = Math.round(bmr * mults[calAct.get()] + adjs[calGoal.get()]) + ' kcal/day';
+    } catch { calRes.textContent='Error'; }
+  }));
+
+  // ── PROTEIN ──
+  const proDiv = subContents[2];
+  proDiv.appendChild(mk('div','section-title','Daily Protein'));
+  const proUnit = unitToggle(['kg','lbs'], ()=>{});
+  proDiv.appendChild(proUnit.el);
+  const proW = field('Body Weight'); proDiv.appendChild(proW.el);
+  proDiv.appendChild(mk('div','field-label','Goal'));
+  const proGoal = toggleRow(['Lose Fat','Maintain','Build Muscle','Athlete'], ()=>{}, 'Build Muscle');
+  proDiv.appendChild(proGoal.el);
+  const proRes = mk('div','result-big','—'); proDiv.appendChild(proRes);
+  proDiv.appendChild(accentBtn('Calculate', () => {
+    try {
+      let w = parseFloat(proW.inp.value);
+      if (proUnit.get()==='lbs') w*=0.453592;
+      const mults = {'Lose Fat':1.8,'Maintain':1.6,'Build Muscle':2.2,'Athlete':2.6};
+      proRes.textContent = Math.round(w * mults[proGoal.get()]) + 'g / day';
+    } catch { proRes.textContent='Error'; }
+  }));
+  proDiv.appendChild(mk('div','hint','Lose Fat: 1.8g/kg | Maintain: 1.6g/kg<br>Build Muscle: 2.2g/kg | Athlete: 2.6g/kg'));
+
+  // ── MACROS ──
+  const macDiv = subContents[3];
+  macDiv.appendChild(mk('div','section-title','Macros Calculator'));
+  const macCal = field('Daily Calories (kcal)'); macDiv.appendChild(macCal.el);
+  macDiv.appendChild(mk('div','field-label','Goal'));
+  const macSplits = {'Lose Fat':[.40,.35,.25],'Balanced':[.30,.40,.30],'Build Muscle':[.35,.45,.20],'Keto':[.30,.05,.65],'Endurance':[.20,.55,.25]};
+  const macGoal = toggleRow(Object.keys(macSplits), ()=>{}, 'Balanced');
+  macDiv.appendChild(macGoal.el);
+  const macBox = mk('div','results-box');
+  const macRows = ['Protein','Carbs','Fat'].map((n,i) => {
+    const row = mk('div','result-row');
+    const cols = ['#30d158','#5ac8fa','var(--accent)'];
+    row.innerHTML = `<span class="result-row-label">${n}</span><span class="result-row-val" style="color:${cols[i]}">—</span>`;
+    macBox.appendChild(row);
+    return row.querySelector('.result-row-val');
+  });
+  macDiv.appendChild(macBox);
+  macDiv.appendChild(accentBtn('Calculate Macros', () => {
+    try {
+      const cals = parseFloat(macCal.inp.value);
+      const [p,c,f] = macSplits[macGoal.get()];
+      macRows[0].textContent = Math.round(cals*p/4)+'g';
+      macRows[1].textContent = Math.round(cals*c/4)+'g';
+      macRows[2].textContent = Math.round(cals*f/9)+'g';
+    } catch { macRows.forEach(r=>r.textContent='Error'); }
+  }));
+  macDiv.appendChild(mk('div','hint','Protein & Carbs = 4 kcal/g | Fat = 9 kcal/g'));
+
+  // ── WATER ──
+  const watDiv = subContents[4];
+  watDiv.appendChild(mk('div','section-title','Daily Water Intake'));
+  const watUnit = unitToggle(['kg','lbs'], ()=>{});
+  watDiv.appendChild(watUnit.el);
+  const watW = field('Body Weight'); watDiv.appendChild(watW.el);
+  watDiv.appendChild(mk('div','field-label','Activity Level'));
+  const watAct = toggleRow(['Low','Moderate','High','Athlete'], ()=>{}, 'Moderate');
+  watDiv.appendChild(watAct.el);
+  const watRes = mk('div','result-big','—'); watDiv.appendChild(watRes);
+  watDiv.appendChild(accentBtn('Calculate', () => {
+    try {
+      let w = parseFloat(watW.inp.value);
+      if (watUnit.get()==='lbs') w*=0.453592;
+      const mults = {Low:30,Moderate:35,High:40,Athlete:45};
+      const ml = w * mults[watAct.get()];
+      watRes.textContent = Math.round(ml)+' ml ('+( ml/1000).toFixed(1)+' L)';
+    } catch { watRes.textContent='Error'; }
+  }));
+
+  // ── BODY FAT ──
+  const bfDiv = subContents[5];
+  bfDiv.appendChild(mk('div','section-title','Body Fat % (Navy)'));
+  const bfUnit = unitToggle(['cm','inches'], ()=>{});
+  bfDiv.appendChild(bfUnit.el);
+  const bfGender = toggleRow(['Male','Female'], g => {
+    hipWrap.style.display = g==='Female'?'block':'none';
+  });
+  bfDiv.appendChild(bfGender.el);
+  const bfNeck = field('Neck'); bfDiv.appendChild(bfNeck.el);
+  const bfWaist = field('Waist'); bfDiv.appendChild(bfWaist.el);
+  const hipWrap = mk('div'); hipWrap.style.display='none';
+  const bfHip = field('Hip (Women only)'); hipWrap.appendChild(bfHip.el); bfDiv.appendChild(hipWrap);
+  const bfH = field('Height'); bfDiv.appendChild(bfH.el);
+  const bfRes = mk('div','result-big','—'); bfDiv.appendChild(bfRes);
+  const bfCat = mk('div','result-sub',''); bfDiv.appendChild(bfCat);
+  bfDiv.appendChild(accentBtn('Calculate Body Fat', () => {
+    try {
+      const toCm = v => bfUnit.get()==='cm' ? parseFloat(v) : parseFloat(v)*2.54;
+      const neck=toCm(bfNeck.inp.value), waist=toCm(bfWaist.inp.value), h=toCm(bfH.inp.value);
+      let bf;
+      if (bfGender.get()==='Male') {
+        bf = 495/(1.0324 - 0.19077*Math.log10(waist-neck) + 0.15456*Math.log10(h)) - 450;
+      } else {
+        const hip = toCm(bfHip.inp.value);
+        bf = 495/(1.29579 - 0.35004*Math.log10(waist+hip-neck) + 0.22100*Math.log10(h)) - 450;
+      }
+      bfRes.textContent = bf.toFixed(1)+'%';
+      const isMale = bfGender.get()==='Male';
+      const cats = isMale ? [[6,'Essential'],[14,'Athlete'],[18,'Fitness'],[25,'Average'],[100,'Obese']]
+                           : [[14,'Essential'],[21,'Athlete'],[25,'Fitness'],[32,'Average'],[100,'Obese']];
+      bfCat.textContent = cats.find(([t])=>bf<t)[1];
+    } catch { bfRes.textContent='Error'; }
+  }));
+
+  // ── IDEAL WEIGHT ──
+  const iwDiv = subContents[6];
+  iwDiv.appendChild(mk('div','section-title','Ideal Body Weight'));
+  const iwUnit = unitToggle(['cm','inches'], ()=>{});
+  iwDiv.appendChild(iwUnit.el);
+  const iwGender = toggleRow(['Male','Female'], ()=>{});
+  iwDiv.appendChild(iwGender.el);
+  const iwH = field('Height'); iwDiv.appendChild(iwH.el);
+  const iwRes = mk('div','result-big','—'); iwDiv.appendChild(iwRes);
+  iwDiv.appendChild(accentBtn('Calculate', () => {
+    try {
+      let h = parseFloat(iwH.inp.value);
+      const hIn = iwUnit.get()==='cm' ? h/2.54 : h;
+      const over = hIn - 60;
+      const devine = iwGender.get()==='Male' ? 50+2.3*over : 45.5+2.3*over;
+      const robinson = iwGender.get()==='Male' ? 52+1.9*over : 49+1.7*over;
+      const avg = (devine+robinson)/2;
+      iwRes.textContent = avg.toFixed(1)+' kg  ('+( avg*2.20462).toFixed(1)+' lbs)';
+    } catch { iwRes.textContent='Error'; }
+  }));
+  iwDiv.appendChild(mk('div','hint','Based on Devine & Robinson formulas'));
+
+  // ── 1RM ──
+  const rmDiv = subContents[7];
+  rmDiv.appendChild(mk('div','section-title','1RM Calculator'));
+  const rmUnit = unitToggle(['kg','lbs'], ()=>{});
+  rmDiv.appendChild(rmUnit.el);
+  const rmW = field('Weight lifted'); rmDiv.appendChild(rmW.el);
+  const rmR = field('Reps performed'); rmDiv.appendChild(rmR.el);
+  const rmBox = mk('div','results-box');
+  const pcts = [100,95,90,85,80,75,70];
+  const rmRows = pcts.map(p => {
+    const row = mk('div','rm-row');
+    row.innerHTML = `<span class="rm-pct">${p}%</span><span class="rm-val${p===100?' main':''}">—</span>`;
+    rmBox.appendChild(row);
+    return row.querySelector('.rm-val');
+  });
+  rmDiv.appendChild(rmBox);
+  rmDiv.appendChild(accentBtn('Calculate 1RM', () => {
+    try {
+      const w=parseFloat(rmW.inp.value), r=parseFloat(rmR.inp.value);
+      const oneRM = w*(1+r/30);
+      const u = rmUnit.get();
+      pcts.forEach((p,i) => { rmRows[i].textContent = (oneRM*p/100).toFixed(1)+' '+u; });
+    } catch { rmRows.forEach(r=>r.textContent='Error'); }
+  }));
+
+  // ── HR ZONES ──
+  const hrDiv = subContents[8];
+  hrDiv.appendChild(mk('div','section-title','Heart Rate Zones'));
+  const hrAge = field('Age'); hrDiv.appendChild(hrAge.el);
+  const hrRest = field('Resting HR (optional)'); hrDiv.appendChild(hrRest.el);
+  const hrBox = mk('div','results-box');
+  const zoneNames = ['Z1 — Warm Up','Z2 — Fat Burn','Z3 — Cardio','Z4 — Hard','Z5 — Max'];
+  const zoneCols = ['#5ac8fa','#30d158','#ff9f0a','#ff6b35','#ff453a'];
+  const zoneRows = zoneNames.map((name,i) => {
+    const row = mk('div','zone-row');
+    row.innerHTML = `<span class="zone-name" style="color:${zoneCols[i]}">${name}</span><span class="zone-val">—</span>`;
+    hrBox.appendChild(row);
+    return row.querySelector('.zone-val');
+  });
+  hrDiv.appendChild(hrBox);
+  hrDiv.appendChild(accentBtn('Calculate Zones', () => {
+    try {
+      const age=parseFloat(hrAge.inp.value), maxHR=220-age;
+      const rhr = parseFloat(hrRest.inp.value) || null;
+      const pcts = [[.50,.60],[.60,.70],[.70,.80],[.80,.90],[.90,1.0]];
+      pcts.forEach(([lo,hi],i) => {
+        const low = rhr ? rhr+(maxHR-rhr)*lo : maxHR*lo;
+        const high = rhr ? rhr+(maxHR-rhr)*hi : maxHR*hi;
+        zoneRows[i].textContent = Math.round(low)+' – '+Math.round(high)+' bpm';
+      });
+    } catch { zoneRows.forEach(r=>r.textContent='Error'); }
+  }));
+
+  return div;
+}
+
+function buildLoan() {
+  const div = mk('div','tab-content');
+  div.appendChild(mk('div','section-title','🏦 Loan Calculator'));
+  const loanAmt = field('Loan amount (€)'); div.appendChild(loanAmt.el);
+  const loanRate = field('Annual interest rate (%)'); div.appendChild(loanRate.el);
+  const loanMo = field('Number of months'); div.appendChild(loanMo.el);
+  const resBox = mk('div','results-box');
+  const labels = ['Monthly payment','Total amount','Total interest'];
+  const colors = ['var(--fg)','var(--accent)','var(--red)'];
+  const resVals = labels.map((lbl,i) => {
+    const row = mk('div','result-row');
+    row.innerHTML = `<span class="result-row-label">${lbl}</span><span class="result-row-val" style="color:${colors[i]}">—</span>`;
+    resBox.appendChild(row);
+    return row.querySelector('.result-row-val');
+  });
+  div.appendChild(accentBtn('Calculate', () => {
+    try {
+      const P=parseFloat(loanAmt.inp.value), r=parseFloat(loanRate.inp.value)/100/12, n=parseInt(loanMo.inp.value);
+      const monthly = r===0 ? P/n : P*r*(1+r)**n/((1+r)**n-1);
+      const total=monthly*n, interest=total-P;
+      [monthly,total,interest].forEach((v,i) => resVals[i].textContent=v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')+' €');
+    } catch { resVals.forEach(r=>r.textContent='Error'); }
+  }));
+  div.appendChild(resBox);
+  return div;
+}
+
+// ── INIT ──────────────────────────────────────────────
+const builders = [buildBasic, buildConverter, buildPercentage, buildFitness, buildLoan];
+const tabContents = [];
+let activeTab = 0;
+
+TABS.forEach((tab, i) => {
+  // Tab button
+  const btn = mk('div','tab-btn'+(i===0?' active':''));
+  btn.innerHTML = `<span class="icon">${tab.icon}</span><span class="label">${tab.label}</span><div class="indicator"></div>`;
+  if (i===0) { btn.style.color=tab.color; btn.querySelector('.indicator').style.background=tab.color; }
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach((b,j) => {
+      const t = TABS[j];
+      b.classList.toggle('active', j===i);
+      b.style.color = j===i ? t.color : '';
+      b.querySelector('.indicator').style.background = j===i ? t.color : 'transparent';
+    });
+    tabContents.forEach((c,j) => c.classList.toggle('active', j===i));
+    // scroll to top
+    document.querySelector('.content').scrollTop = 0;
+  };
+  $('tabBar').appendChild(btn);
+
+  // Content
+  const content = builders[i]();
+  content.classList.toggle('active', i===0);
+  $('mainContent').appendChild(content);
+  tabContents.push(content);
+});
+</script>
+</body>
+</html>
