@@ -71,11 +71,11 @@ The `.exe` will be in the `dist/` folder.
 Single file — no dependencies, no frameworks, no installation needed.
 
 ### Run locally
-Just open `calculator_v3.html` in any browser.
+Just open `index.html` in any browser.
 
 ### Deploy online (Netlify — free)
 1. Go to [netlify.com](https://netlify.com)
-2. Drag & drop `calculator_v3.html`
+2. Drag & drop `index.html`
 3. Get a public link instantly ✅
 
 ### iOS / iPhone
@@ -86,11 +86,10 @@ Open the deployed link in Safari → Share → **Add to Home Screen** for a nati
 ## 📁 Project Structure
 
 ```
-Calculator/
+Ultimate-Calculator/
 ├── calculator_v3.py        # Desktop app (Python + tkinter)
-├── calculator_v3.html      # Web app (HTML/CSS/JS)
-├── dist/
-│   └── calculator_v3.exe   # Windows executable
+├── index.html               # Web app (HTML/CSS/JS) — deployed to Netlify
+├── LICENSE
 └── README.md
 ```
 
